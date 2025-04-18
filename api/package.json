@@ -1,9 +1,14 @@
 {
-  "name": "khan-traders-api",
+  "name": "khan-traders-api-serverless",
   "version": "1.0.0",
-  "description": "API for Khan Traders",
+  "description": "Serverless API for Khan Traders",
   "main": "index.js",
   "engines": {
     "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
   }
 } 
