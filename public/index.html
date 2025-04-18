@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khan Traders API</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    pre {
+      background: #f4f4f4;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Khan Traders API</h1>
+  <p>This is the API server for Khan Traders Inventory Management System.</p>
+  <p>API endpoints are available at:</p>
+  <pre>
+GET  /api/auth/profile     - Get user profile
+POST /api/auth/login       - Login
+POST /api/auth/register    - Register
+
+GET  /api/products         - Get all products
+GET  /api/products/:id     - Get product by ID
+POST /api/products         - Create new product
+
+GET  /api/sales            - Get all sales
+POST /api/sales            - Create new sale
+  </pre>
+  <p>For more information, please refer to the <a href="https://github.com/AwaisHamadAshraf/Khan-Traders-Backend">GitHub repository</a>.</p>
+</body>
+</html> 
