@@ -8,6 +8,9 @@ const morgan = require('morgan');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 
+// Import demo data handlers
+const { setupDemoRoutes } = require('./demo-data');
+
 // Load environment variables
 dotenv.config();
 
@@ -21,26 +24,15 @@ const salesRoutes = require('../src/routes/sales.routes');
 const app = express();
 
 // Set environment variables with fallback values
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/khan-traders';
+const MONGODB_URI = process.env.MONGODB_URI;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',') 
   : ['http://localhost:3000', 'https://khan-traders.vercel.app'];
 
-// CORS configuration
+// CORS configuration with more permissive settings for serverless
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl requests)
-    if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.indexOf(origin) === -1) {
-      // In development, allow all origins if NODE_ENV is 'development'
-      if (NODE_ENV === 'development') {
-        return callback(null, true);
-      }
-      return callback(new Error('CORS policy violation'), false);
-    }
-    return callback(null, true);
-  },
+  origin: '*', // Allow all origins in production for now
   credentials: true
 }));
 
@@ -49,50 +41,74 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/sales', salesRoutes);
-
-// Root route
+// Root route (always works regardless of database)
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Welcome to Khan Traders API',
     environment: NODE_ENV,
-    mongodb: MONGODB_URI.includes('@') 
-      ? MONGODB_URI.replace(/mongodb(\+srv)?:\/\/([^:]+):([^@]+)@/, 'mongodb$1://$2:****@') 
-      : 'mongodb://localhost:27017/khan-traders'
+    mongodbConnected: mongoose.connection.readyState === 1,
+    demoMode: !MONGODB_URI || mongoose.connection.readyState !== 1,
+    loginCredentials: !MONGODB_URI ? {
+      username: 'admin',
+      password: 'admin123'
+    } : null
   });
 });
 
-// Health check endpoint
+// Health check endpoint (always works regardless of database)
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    mongodbConnected: mongoose.connection.readyState === 1
+  });
 });
+
+// API routes - only register if MongoDB is connected
+let dbConnected = false;
+
+// Connect to MongoDB only if MONGODB_URI is provided
+if (MONGODB_URI) {
+  try {
+    mongoose
+      .connect(MONGODB_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      })
+      .then(() => {
+        console.log('Connected to MongoDB successfully');
+        dbConnected = true;
+        
+        // Register API routes only after successful DB connection
+        app.use('/api/auth', authRoutes);
+        app.use('/api/users', userRoutes);
+        app.use('/api/products', productRoutes);
+        app.use('/api/sales', salesRoutes);
+      })
+      .catch((err) => {
+        console.error('Failed to connect to MongoDB:', err.message);
+        console.error('API routes will use demo data.');
+        
+        // Setup demo routes since DB connection failed
+        setupDemoRoutes(app);
+      });
+  } catch (error) {
+    console.error('Error in MongoDB connection setup:', error.message);
+    setupDemoRoutes(app);
+  }
+} else {
+  console.log('No MONGODB_URI provided. Running in demo mode.');
+  setupDemoRoutes(app);
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Express error handler:', err.stack);
   res.status(err.status || 500).json({
     message: err.message || 'Internal Server Error',
     error: NODE_ENV === 'development' ? err : {}
   });
 });
-
-// Connect to MongoDB
-mongoose
-  .connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log('Connected to MongoDB successfully');
-  })
-  .catch((err) => {
-    console.error('Failed to connect to MongoDB:', err.message);
-    console.error('The application will continue to run, but database functionality will not work.');
-  });
 
 // Export the Express app for Vercel serverless functions
 module.exports = app; 
