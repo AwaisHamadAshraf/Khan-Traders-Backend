@@ -1,0 +1,9 @@
+{
+  "name": "khan-traders-api",
+  "version": "1.0.0",
+  "description": "API for Khan Traders",
+  "main": "index.js",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+} 
